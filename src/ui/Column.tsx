@@ -83,7 +83,7 @@ export function Column({ units, ev, length, rows, selected, onSelect }: Props) {
           const x = colX(j) - 0.5
           const y = TOP + pos
           return (
-            <g key={i} className="glyph" style={{ transform: `translate(${x}px, ${y}px)` }}>
+            <g key={i} className="glyph" data-i={i} style={{ transform: `translate(${x}px, ${y}px)` }}>
               {/* 約物は字面が枠の半分なので、印も字面の分だけ */}
               {mark && <rect className="mark" x={0.02} y={u.akiBefore + 0.02} width={0.96} height={1 - u.akiBefore - u.akiAfter - 0.04} rx={0.12} />}
               <path d={GLYPHS[u.ch] ?? ''} />

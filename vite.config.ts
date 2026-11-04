@@ -34,5 +34,7 @@ export default defineConfig({
   // ほかの作品の開発サーバーと重ならないよう、ポートを固定する
   server: { port: 5209, strictPort: true },
   preview: { port: 5210, strictPort: true },
+  // 字形データ（src/glyphs.json、約 270KB）が本体に入るので、既定の 500KB の警告を少し上げる（gzip で約 160KB）
+  build: { chunkSizeWarningLimit: 600 },
   plugins: [contentSecurityPolicy(), react()],
 })
