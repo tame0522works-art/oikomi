@@ -95,7 +95,7 @@ export function greedy(puzzle: Puzzle, units: Unit[]): { starts: number[]; hang:
     }
     // 行頭禁則は次の行の違反として出るので、次の行の頭も見る
     const ok = (e: number, hg: boolean) =>
-      fits(e, hg).violations.length === 0 && !noLineStart(units[e].cls) && !inseparablePair(units[e - 1], units[e])
+      fits(e, hg).violations.length === 0 && (e >= n || (!noLineStart(units[e].cls) && !inseparablePair(units[e - 1], units[e])))
     let chosen: [number, boolean] | null = null
     if (ok(k, false)) chosen = [k, false]
     else if (hangsLeft > 0 && ok(k + 1, true)) chosen = [k + 1, true]

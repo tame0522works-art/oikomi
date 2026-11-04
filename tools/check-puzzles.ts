@@ -6,6 +6,7 @@ import { evaluate, initialBoard } from '../src/engine/board.ts'
 import { greedy, solve } from '../src/engine/solve.ts'
 import { buildUnits } from '../src/engine/units.ts'
 import { PUZZLES } from '../src/puzzles/index.ts'
+import glyphs from '../src/glyphs.json' with { type: 'json' }
 
 let failed = 0
 const fail = (id: string, msg: string) => {
@@ -19,6 +20,8 @@ for (const p of PUZZLES) {
   // ルビ・縦中横・欧文は扱わないので、半角や空白は入れない
   const bad = [...p.text].filter((c) => c.codePointAt(0)! < 0x3000 && c !== '―' && c !== '…' && c !== '—' && c !== '‥')
   if (bad.length) fail(p.id, `扱えない字がある: ${[...new Set(bad)].join(' ')}`)
+  const missing = [...new Set(p.text)].filter((c) => !(c in glyphs))
+  if (missing.length) fail(p.id, `字形データにない字（npm run glyphs を流す）: ${missing.join(' ')}`)
   const units = buildUnits(p.text)
   const sol = solve(p, units)
   if (!sol) {

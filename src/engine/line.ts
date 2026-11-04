@@ -24,7 +24,7 @@ export interface LineEval {
   spread: number
   /** この行の乱れ（0 が理想） */
   cost: number
-  /** 字ごとの位置（行頭からの全角単位）。ぶら下げた字は字詰めの外 */
+  /** 字ごとの、字の枠（全角）の頭の位置（行頭からの全角単位）。ぶら下げた字は字詰めの外 */
   positions: number[]
 }
 
@@ -57,11 +57,14 @@ export function evalLine(units: Unit[], start: number, end: number, length: numb
   const before = (i: number) => (i === start ? 0 : units[i].before)
   const after = (i: number) => (i === contentEnd - 1 ? 0 : units[i].after)
   const widths: number[] = []
+  // 字の枠の頭より前で削った空き（字を描く位置を、その分だけ前へずらす）
+  const cutBefore: number[] = []
   let natural = 0
   let shrinkable = 0
   for (let i = start; i < contentEnd; i++) {
     const w = unitWidth(units[i], before(i), after(i))
     widths.push(w)
+    cutBefore.push(units[i].akiBefore - before(i))
     natural += w
     // 句点の後ろは縮めない（JLREQ の既定）
     if (units[i].cls !== 'period') shrinkable += after(i)
@@ -81,6 +84,7 @@ export function evalLine(units: Unit[], start: number, end: number, length: numb
       const u = units[i]
       const cut = (before(i) + (u.cls !== 'period' ? after(i) : 0)) * ratio
       widths[i - start] -= cut
+      cutBefore[i - start] += before(i) * ratio
     }
     cost = SQUEEZE_WEIGHT * squeeze * squeeze
   } else if (!last && natural < length - EPS) {
@@ -104,7 +108,7 @@ export function evalLine(units: Unit[], start: number, end: number, length: numb
   let pos = 0
   for (let k = 0; k < widths.length; k++) {
     if (gaps[k]) pos += spread
-    positions.push(pos)
+    positions.push(pos - cutBefore[k])
     pos += widths[k]
   }
   if (hang) positions.push(length)
