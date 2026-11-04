@@ -7,7 +7,7 @@ import { greedy, solve } from '../src/engine/solve.ts'
 import { buildUnits } from '../src/engine/units.ts'
 import { PUZZLES } from '../src/puzzles/index.ts'
 import glyphs from '../src/glyphs.json' with { type: 'json' }
-import { route } from './route.ts'
+import { route } from '../src/engine/route.ts'
 
 let failed = 0
 const fail = (id: string, msg: string) => {

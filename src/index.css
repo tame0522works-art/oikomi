@@ -186,6 +186,12 @@ a {
   stroke-width: 0.03;
 }
 
+.board .col.hinted {
+  stroke: var(--gold);
+  stroke-width: 0.06;
+  animation: blink 1.2s ease-in-out infinite;
+}
+
 .board .col.overflow {
   stroke: var(--wrong);
   stroke-width: 0.05;
@@ -229,7 +235,9 @@ a {
   .board .glyph {
     transition: none;
   }
-  .board .mark {
+  .board .mark,
+  .board .col.hinted,
+  .moves button.hinted {
     animation: none;
   }
 }
@@ -268,6 +276,17 @@ a {
   justify-content: center;
   gap: 2px;
   padding: 6px 4px;
+}
+
+.moves button.hinted {
+  outline: 3px solid var(--gold);
+  outline-offset: 2px;
+  animation: blink 1.2s ease-in-out infinite;
+}
+
+.hint-text {
+  color: var(--gold);
+  font-weight: 600;
 }
 
 .moves small {

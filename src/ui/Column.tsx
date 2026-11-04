@@ -25,6 +25,8 @@ interface Props {
   length: number
   rows: number
   selected: number | null
+  /** ヒントで指している行 */
+  hintLine: number | null
   onSelect: (j: number) => void
 }
 
@@ -41,7 +43,7 @@ function markedChars(ev: BoardEval): Map<number, Violation> {
   return marks
 }
 
-export function Column({ units, ev, length, rows, selected, onSelect }: Props) {
+export function Column({ units, ev, length, rows, selected, hintLine, onSelect }: Props) {
   const { width, height } = boardSize(length, rows)
   const marks = markedChars(ev)
   const colX = (j: number) => width - (j + 0.5) * PITCH
@@ -55,7 +57,7 @@ export function Column({ units, ev, length, rows, selected, onSelect }: Props) {
         return (
           <g key={`col${j}`}>
             <rect
-              className={`col${selected === j ? ' selected' : ''}${overflow ? ' overflow' : ''}`}
+              className={`col${selected === j ? ' selected' : ''}${hintLine === j ? ' hinted' : ''}${overflow ? ' overflow' : ''}`}
               x={x - PITCH / 2 + 0.06}
               y={0}
               width={PITCH - 0.12}

@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { applyMove, evaluate, initialBoard, unitsOf, type Board, type BoardEval, type Move, type Puzzle } from './engine/board.ts'
 import type { Violation } from './engine/line.ts'
 import { displayCost, stars } from './engine/score.ts'
+import { route, type Step } from './engine/route.ts'
 import { solve } from './engine/solve.ts'
 import type { Unit } from './engine/units.ts'
 import { PUZZLES } from './puzzles/index.ts'
@@ -69,10 +70,13 @@ interface PlayProps {
 
 function Play({ index, puzzle, best, onSolved, onBack, onNext }: PlayProps) {
   const units = useMemo(() => unitsOf(puzzle), [puzzle])
-  const optimum = useMemo(() => solve(puzzle, units)?.cost ?? 0, [puzzle, units])
+  const solution = useMemo(() => solve(puzzle, units), [puzzle, units])
+  const optimum = solution?.cost ?? 0
   const [history, setHistory] = useState<Board[]>(() => [initialBoard(puzzle, units.length)])
   const [selected, setSelected] = useState<number | null>(0)
   const [dismissed, setDismissed] = useState(false)
+  // ヒント: 最善解へ向かう次の1手。'best' はもう最善の組み方になっているとき
+  const [hint, setHint] = useState<Step | 'best' | null>(null)
   const board = history[history.length - 1]
   const ev = useMemo(() => evaluate(puzzle, units, board), [puzzle, units, board])
   const star = ev.solved ? stars(ev.cost, optimum) : null
@@ -83,9 +87,27 @@ function Play({ index, puzzle, best, onSolved, onBack, onNext }: PlayProps) {
     if (!next) return
     setHistory((h) => [...h, next])
     setDismissed(false)
+    setHint(null)
     const nextEv = evaluate(puzzle, units, next)
     if (nextEv.solved) onSolved({ stars: stars(nextEv.cost, optimum), cost: nextEv.cost })
   }
+  const showHint = () => {
+    if (!solution) return
+    let steps: Step[] = []
+    try {
+      steps = route(puzzle, units, board, solution.board)
+    } catch {
+      // check:hints で全問・途中の盤面から最善解までたどれることを確かめている。万一たどれなければ何も出さない
+      return
+    }
+    if (!steps.length) {
+      setHint('best')
+      return
+    }
+    setHint(steps[0])
+    setSelected(steps[0][0])
+  }
+  const hinted = (m: Move) => Array.isArray(hint) && hint[0] === selected && hint[1] === m
   const can = (m: Move) => selected !== null && applyMove(puzzle, units, board, selected, m) !== null
   const lastRow = selected === puzzle.rows - 1
 
@@ -112,7 +134,15 @@ function Play({ index, puzzle, best, onSolved, onBack, onNext }: PlayProps) {
       </p>
 
       <div className="stage">
-        <Column units={units} ev={ev} length={puzzle.length} rows={puzzle.rows} selected={selected} onSelect={setSelected} />
+        <Column
+          units={units}
+          ev={ev}
+          length={puzzle.length}
+          rows={puzzle.rows}
+          selected={selected}
+          hintLine={Array.isArray(hint) ? hint[0] : null}
+          onSelect={setSelected}
+        />
       </div>
 
       <p className="status" aria-live="polite">
@@ -121,27 +151,52 @@ function Play({ index, puzzle, best, onSolved, onBack, onNext }: PlayProps) {
 
       <div className="controls">
         <p className="target">
-          {selected === null ? '行をタップして選ぶ' : lastRow ? `${selected + 1}行目（最後の行）は、前の行の操作で動かす` : `${selected + 1}行目の行末を`}
+          {Array.isArray(hint) ? (
+            <span className="hint-text">
+              ヒント: {hint[0] + 1}行目の行末を「{MOVE_LABEL[hint[1]]}」
+            </span>
+          ) : hint === 'best' ? (
+            <span className="hint-text">ヒント: いまの組み方が最善です</span>
+          ) : selected === null ? '行をタップして選ぶ' : lastRow ? `${selected + 1}行目（最後の行）は、前の行の操作で動かす` : `${selected + 1}行目の行末を`}
         </p>
         <div className="moves">
-          <button type="button" onClick={() => move('pull')} disabled={!can('pull')}>
+          <button type="button" className={hinted('pull') ? 'hinted' : undefined} onClick={() => move('pull')} disabled={!can('pull')}>
             追い込む
             <small>次の行の頭を入れる</small>
           </button>
-          <button type="button" onClick={() => move('push')} disabled={!can('push')}>
+          <button type="button" className={hinted('push') ? 'hinted' : undefined} onClick={() => move('push')} disabled={!can('push')}>
             追い出す
             <small>行末の字を送る</small>
           </button>
-          <button type="button" onClick={() => move('hang')} disabled={!can('hang')}>
+          <button type="button" className={hinted('hang') ? 'hinted' : undefined} onClick={() => move('hang')} disabled={!can('hang')}>
             ぶら下げ
             <small>句読点を外に出す</small>
           </button>
         </div>
         <div className="sub">
-          <button type="button" className="ghost" onClick={() => setHistory((h) => h.slice(0, -1))} disabled={history.length < 2}>
+          <button
+            type="button"
+            className="ghost"
+            onClick={() => {
+              setHistory((h) => h.slice(0, -1))
+              setHint(null)
+            }}
+            disabled={history.length < 2}
+          >
             1手戻す
           </button>
-          <button type="button" className="ghost" onClick={() => setHistory((h) => [h[0]])} disabled={history.length < 2}>
+          <button type="button" className="ghost" onClick={showHint}>
+            ヒント
+          </button>
+          <button
+            type="button"
+            className="ghost"
+            onClick={() => {
+              setHistory((h) => [h[0]])
+              setHint(null)
+            }}
+            disabled={history.length < 2}
+          >
             最初から
           </button>
         </div>
@@ -173,6 +228,8 @@ function Play({ index, puzzle, best, onSolved, onBack, onNext }: PlayProps) {
     </main>
   )
 }
+
+const MOVE_LABEL: { [m in Move]: string } = { pull: '追い込む', push: '追い出す', hang: 'ぶら下げ' }
 
 const VIOLATION_TEXT: { [v in Violation]: (ch: string) => string } = {
   'line-start': (ch) => `行頭に「${ch}」が来ている`,

@@ -11,7 +11,7 @@ import { solve } from '../src/engine/solve.ts'
 import { buildUnits } from '../src/engine/units.ts'
 import { PUZZLES } from '../src/puzzles/index.ts'
 import { Browser, sleep, type Page, type Viewport } from './cdp.ts'
-import { route } from './route.ts'
+import { route } from '../src/engine/route.ts'
 
 const PORT = 4209
 const BASE = `http://127.0.0.1:${PORT}/`
@@ -221,6 +221,32 @@ const scenarios: Scenario[] = [
       assert.equal(await ui.meter('乱れ'), String(displayCost(cost)))
       await ui.press('一覧へ')
       assert.match(await ui.text('.menu header .muted'), /★ 3 \/ 60/)
+    },
+  },
+  {
+    name: 'スマホの指で9問目をヒントだけで解く: 光った行と光ったボタンを押し続けると★3',
+    viewport: PHONE,
+    async run(ui) {
+      await ui.open()
+      await ui.press('9問目')
+      for (let k = 0; k < 40; k++) {
+        if (await ui.page.run<boolean>(`return !!document.querySelector('.clear')`)) {
+          if (/★★★/.test(await ui.text('.clear'))) break
+          await ui.press('続けて揃える')
+        }
+        await ui.press('ヒント')
+        const hint = await ui.text('.hint-text')
+        const m = hint.match(/ヒント: ([0-9]+)行目の行末を「(.+)」/)
+        assert.ok(m, `ヒントの文が読めない: ${hint}`)
+        // 光っている行と、文で言っている行が同じ
+        assert.equal(await ui.page.run(`return document.querySelector('rect.col.hinted')?.getAttribute('aria-label')`), `${m[1]}行目を選ぶ`)
+        assert.ok((await ui.text('.moves button.hinted')).startsWith(m[2]), '光っているボタンが文と違う')
+        await ui.press(m[2])
+      }
+      assert.match(await ui.text('.clear'), /★★★/)
+      await ui.press('盤面を見る')
+      await ui.press('ヒント')
+      assert.equal(await ui.text('.hint-text'), 'ヒント: いまの組み方が最善です')
     },
   },
   {
